@@ -3,8 +3,8 @@ module github.com/front-ck996/csy
 go 1.19
 
 require (
-	gorm.io/driver/sqlite v1.4.4
-	gorm.io/gorm v1.24.6
+	gorm.io/driver/sqlite v1.3.6
+gorm.io/gorm v1.23.8
 )
 
 require (
