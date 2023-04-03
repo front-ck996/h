@@ -4,7 +4,7 @@ import (
 	"go/format"
 )
 
-func FormatCode(src []byte) []byte {
-	got, _ := format.Source(src)
-	return got
+func FormatCode(src []byte) ([]byte, error) {
+	got, err := format.Source(src)
+	return got, err
 }
