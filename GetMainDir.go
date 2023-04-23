@@ -1,10 +1,10 @@
 package csy
 
 import (
-	"fmt"
 	"os"
 )
 
-func GetMainDir() {
-	fmt.Println(os.Getwd())
+func GetMainDir() string {
+	dir, _ := os.Getwd()
+	return dir
 }
