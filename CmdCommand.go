@@ -6,12 +6,16 @@ import (
 	"github.com/saintfish/chardet"
 	"io"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // Cmd 封装常用的操作系统命令的函数
 type Cmd struct {
 	Origin *exec.Cmd
+	// 打印执行的命令
+	PrintCmd bool
 	// 执行命令前，进入这个目录
 	RunBeforeCdDir string
 
@@ -76,13 +80,24 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 	switch {
 	case runtime.GOOS == "windows":
 		cmdStr = append(cmdStr, "cmd.exe", "/C")
+		if c.RunBeforeCdDir != "" {
+			cmdStr = append(cmdStr, filepath.VolumeName(c.RunBeforeCdDir))
+			cmdStr = append(cmdStr, "cd "+strings.ReplaceAll(c.RunBeforeCdDir, "\\", "/"))
+		}
 		break
 	default:
 		cmdStr = append(cmdStr, "hash", "-c")
 	}
-	cmdStr = append(cmdStr, inputCmd...)
-	cmd := exec.Command(cmdStr[0], cmdStr[1:]...)
 
+	cmdStr = append(cmdStr, inputCmd...)
+
+	if c.PrintCmd {
+		fmt.Println("========>>")
+		fmt.Println(cmdStr)
+		fmt.Println("<<=======")
+	}
+
+	cmd := exec.Command(cmdStr[0], []string{cmdStr[1], strings.Join(cmdStr[2:], "&")}...)
 	c.Origin = cmd
 
 	// 获取输入流
@@ -114,7 +129,7 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 			if c.StreamStdinCB != nil {
 				c.StreamStdinCB(text)
 			}
-			c.StdoutText += text
+			c.StdoutText += text + "\n"
 		}
 	}()
 
@@ -126,7 +141,7 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 			if c.StreamStderrCB != nil {
 				c.StreamStderrCB(text)
 			}
-			c.StderrText += text
+			c.StderrText += text + "\n"
 		}
 	}()
 
@@ -141,7 +156,6 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 	//	return "", err
 	//}
 	// 等待命令执行完毕
-
 	err = cmd.Wait()
 	if err != nil {
 		return "", err

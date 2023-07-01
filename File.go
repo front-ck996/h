@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 type FileHandle struct {
@@ -198,7 +200,7 @@ func (file *FileHandle) SplitFile(originalFile, targetFolder string, chunkSize u
 	splitFiles = append(splitFiles, filepath.Base(chunkFileName))
 	marshal, err := json.Marshal(splitFiles)
 	if err == nil {
-		os.WriteFile(filepath.Dir(chunkFileName)+"/files.txt", marshal, 0755)
+		os.WriteFile(filepath.Dir(chunkFileName)+"/files.json", marshal, 0755)
 	}
 	return nil
 }
@@ -264,8 +266,10 @@ func _getChunkNumber(chunkFile string) int {
 	fileExt := filepath.Ext(fileName)
 	fileNameWithoutExt := strings.TrimSuffix(fileName, fileExt)
 
-	var chunkNumber int
-	_, err := fmt.Sscanf(fileNameWithoutExt, "chunk%d", &chunkNumber)
+	//var chunkNumber int
+	//fileNameWithoutExt = "mysql-5.7.41-winx64_chunk18"
+	//_, err := fmt.Sscanf(fileNameWithoutExt, "chunk%d", &chunkNumber)
+	chunkNumber, err := _extractChunkNumber(fileNameWithoutExt)
 	if err != nil {
 		return 0
 	}
@@ -273,8 +277,25 @@ func _getChunkNumber(chunkFile string) int {
 	return chunkNumber
 }
 
+func _extractChunkNumber(fileNameWithoutExt string) (int, error) {
+	r := regexp.MustCompile(`chunk(\d+)`)
+	matches := r.FindStringSubmatch(fileNameWithoutExt)
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("未找到 chunkNumber")
+	}
+
+	chunkNumber := matches[1]
+	var chunk int
+	_, err := fmt.Sscanf(chunkNumber, "%d", &chunk)
+	if err != nil {
+		return 0, err
+	}
+
+	return chunk, nil
+}
+
 // 解压 zip 文件
-func UnZip(zipFilePath, targetDir string) error {
+func (file *FileHandle) UnZip(zipFilePath, targetDir string) error {
 	// 打开 ZIP 文件
 	zipFile, err := zip.OpenReader(zipFilePath)
 	if err != nil {
@@ -320,6 +341,96 @@ func UnZip(zipFilePath, targetDir string) error {
 		_, err = io.Copy(outputFile, zipFile)
 		if err != nil {
 			return fmt.Errorf("无法解压文件: %s", err)
+		}
+	}
+
+	return nil
+}
+
+// 下载文件
+
+func (file *FileHandle) DownloadFile(url string, outputPath string, progressCallBack func(progress int, downloadedSize, fileSize int64, downloadSpeed float64)) error {
+	response, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	// 创建输出文件
+	os.MkdirAll(filepath.Dir(outputPath), 0755)
+
+	outputFile, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+
+	// 创建缓冲区
+	buffer := make([]byte, 1024)
+
+	// 获取文件大小
+	fileSize := response.ContentLength
+	downloadedSize := int64(0)
+
+	// 创建进度条
+	progress := 0
+	// 开始时间
+	startTime := time.Now()
+
+	// 定时器，每秒更新一次下载速度
+	ticker := time.NewTicker(time.Second)
+	defer func() {
+		// 结束时间
+		endTime := time.Now()
+		duration := endTime.Sub(startTime)
+		downloadSpeed := float64(downloadedSize) / duration.Seconds()
+		progressCallBack(progress, downloadedSize, fileSize, downloadSpeed)
+		ticker.Stop()
+	}()
+
+	go func() {
+		for range ticker.C {
+			// 计算已下载的字节数
+			currentSize := downloadedSize
+
+			// 计算下载速度
+			duration := time.Since(startTime)
+			downloadSpeed := float64(currentSize) / duration.Seconds()
+			progressCallBack(progress, downloadedSize, fileSize, downloadSpeed)
+
+			//fmt.Printf("下载速度: %.2f bytes/second\n", downloadSpeed)
+		}
+	}()
+
+	// 读取响应体，并写入文件
+	for {
+		// 读取数据
+		n, err := response.Body.Read(buffer)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		// 写入文件
+		_, err = outputFile.Write(buffer[:n])
+		if err != nil {
+			return err
+		}
+
+		// 更新下载大小
+		downloadedSize += int64(n)
+
+		// 计算下载进度
+		newProgress := int((float64(downloadedSize) / float64(fileSize)) * 100)
+		if newProgress != progress {
+			progress = newProgress
+		}
+
+		if downloadedSize == fileSize {
+			break
+		}
+		// 下载完成
+		if err == io.EOF {
+			break
 		}
 	}
 
