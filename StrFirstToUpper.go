@@ -1,6 +1,7 @@
 package csy
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -29,8 +30,11 @@ func StrFirstToLower(str string) string {
 	return strings.ToLower(string(runStr[:1])) + string(runStr[1:])
 }
 
-func StrUpperToSplit(str string, splitStr string) string {
+func FieldConvToFrontField(string2 string) string {
+	return regexp.MustCompile(`ID$`).ReplaceAllString(StrFirstToLower(string2), "Id")
+}
 
+func StrUpperToSplit(str string, splitStr string) string {
 	var result string
 	for i, r := range str {
 		if unicode.IsUpper(r) {

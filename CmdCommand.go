@@ -30,6 +30,9 @@ type Cmd struct {
 	StderrText     string
 }
 
+func NewCMD() Cmd {
+	return Cmd{}
+}
 func (c *Cmd) convCharset(text string) string {
 
 	detector := chardet.NewTextDetector()
@@ -77,6 +80,8 @@ func (c *Cmd) Exit() {
 
 func (c *Cmd) Run(inputCmd []string) (string, error) {
 	var cmdStr []string
+	cmd := exec.Command("")
+
 	switch {
 	case runtime.GOOS == "windows":
 		cmdStr = append(cmdStr, "cmd.exe", "/C")
@@ -84,20 +89,20 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 			cmdStr = append(cmdStr, filepath.VolumeName(c.RunBeforeCdDir))
 			cmdStr = append(cmdStr, "cd "+strings.ReplaceAll(c.RunBeforeCdDir, "\\", "/"))
 		}
+		cmdStr = append(cmdStr, inputCmd...)
+		cmd = exec.Command(cmdStr[0], []string{cmdStr[1], strings.Join(cmdStr[2:], " & ")}...)
 		break
 	default:
-		cmdStr = append(cmdStr, "hash", "-c")
+		cmd = exec.Command(strings.Join(inputCmd, " && "))
+		//cmdStr = append(cmdStr, "bash", "-c")
 	}
-
-	cmdStr = append(cmdStr, inputCmd...)
 
 	if c.PrintCmd {
 		fmt.Println("========>>")
-		fmt.Println(cmdStr)
+		fmt.Println(cmd.String())
 		fmt.Println("<<=======")
 	}
 
-	cmd := exec.Command(cmdStr[0], []string{cmdStr[1], strings.Join(cmdStr[2:], "&")}...)
 	c.Origin = cmd
 
 	// 获取输入流
