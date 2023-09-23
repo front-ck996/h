@@ -26,6 +26,9 @@ func StrFirstToUpper(str string) string {
 }
 
 func StrFirstToLower(str string) string {
+	if len(str) == 0 {
+		return str
+	}
 	runStr := []rune(str)
 	return strings.ToLower(string(runStr[:1])) + string(runStr[1:])
 }
