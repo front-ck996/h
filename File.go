@@ -28,6 +28,18 @@ func (file *FileHandle) FileExists(filename string) bool {
 	}
 	return true
 }
+func (file *FileHandle) FileExistsCreateDir(filename string) error {
+	_, err := os.Stat(filename)
+	if err != nil && os.IsNotExist(err) {
+		fmt.Println(filepath.Dir(filename), filename)
+		err := os.MkdirAll(filepath.Dir(filename), 0644)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return nil
+}
 
 // IsFile is_file()
 func (file *FileHandle) IsFile(filename string) bool {
