@@ -28,6 +28,14 @@ func (file *FileHandle) FileExists(filename string) bool {
 	}
 	return true
 }
+
+func (file *FileHandle) ReadFileContent(filePath string) string {
+	readFile, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+	return string(readFile)
+}
 func (file *FileHandle) FileExistsCreateDir(filename string) error {
 	_, err := os.Stat(filename)
 	if err != nil && os.IsNotExist(err) {
