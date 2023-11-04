@@ -1,0 +1,5 @@
+package browserSpider
+
+func New() {
+
+}
