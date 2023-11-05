@@ -2,8 +2,12 @@ package csy
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"net"
+	"net/http"
 	"strings"
+	"time"
 )
 
 func GetLocalIPList() (map[string]string, error) {
@@ -62,4 +66,30 @@ func GetLocalIPv4List() ([]string, error) {
 	}
 
 	return ipList, nil
+}
+func GetPublicIP() (string, error) {
+	var externalIPServices = []string{
+		"http://ipinfo.io/ip",
+		"http://icanhazip.com",
+		"http://ip.42.pl/raw",
+		"http://myexternalip.com/raw",
+		"http://ipecho.net/plain",
+		"http://ident.me",
+		// 添加其他获取IP的服务地址
+	}
+	rand.Seed(time.Now().UnixNano())
+	selectedService := externalIPServices[rand.Intn(len(externalIPServices))]
+
+	resp, err := http.Get(selectedService)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }

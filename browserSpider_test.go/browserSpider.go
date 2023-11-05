@@ -1,5 +1,0 @@
-package browserSpider
-
-func New() {
-
-}

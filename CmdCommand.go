@@ -18,7 +18,7 @@ type Cmd struct {
 	PrintCmd bool
 	// 执行命令前，进入这个目录
 	RunBeforeCdDir string
-
+	CmdC           bool
 	// 执行过程中输出的流
 	StreamStdinCB func(text string)
 	// 执行过程中错误的流
@@ -31,7 +31,10 @@ type Cmd struct {
 }
 
 func NewCMD() Cmd {
-	return Cmd{}
+	return Cmd{
+		PrintCmd: true,
+		CmdC:     true,
+	}
 }
 func (c *Cmd) convCharset(text string) string {
 
@@ -84,13 +87,19 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 
 	switch {
 	case runtime.GOOS == "windows":
-		cmdStr = append(cmdStr, "cmd.exe", "/C")
+		if c.CmdC {
+			cmdStr = append(cmdStr, "cmd.exe", "/C")
+		}
 		if c.RunBeforeCdDir != "" {
 			cmdStr = append(cmdStr, filepath.VolumeName(c.RunBeforeCdDir))
 			cmdStr = append(cmdStr, "cd "+strings.ReplaceAll(c.RunBeforeCdDir, "\\", "/"))
 		}
 		cmdStr = append(cmdStr, inputCmd...)
-		cmd = exec.Command(cmdStr[0], []string{cmdStr[1], strings.Join(cmdStr[2:], " & ")}...)
+		if c.CmdC {
+			cmd = exec.Command(cmdStr[0], []string{cmdStr[1], strings.Join(cmdStr[2:], " & ")}...)
+		} else {
+			cmd = exec.Command(cmdStr[0], []string{strings.Join(cmdStr[1:], " & ")}...)
+		}
 		break
 	default:
 		cmd = exec.Command(strings.Join(inputCmd, " && "))

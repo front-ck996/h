@@ -6,8 +6,8 @@ import (
 )
 
 func TestNew2(t *testing.T) {
-	browserHandle := New()
+	browserHandle := New(BrowserHandleInit{})
 	chromedp.Run(browserHandle.Ctx,
-		browserHandle.Navigate("http://www.baidu.com", ""),
+		browserHandle.Navigate("https://bot.sannysoft.com/", ""),
 	)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+// https://bot.sannysoft.com/
 func DelWebdriver() chromedp.ActionFunc {
 	script := `(function(w, n, wn) {
  // Pass the Webdriver Test.

@@ -456,3 +456,73 @@ func (file *FileHandle) DownloadFile(url string, outputPath string, progressCall
 
 	return nil
 }
+func (f2 *FileHandle) CopyDir(src string, dest string) error {
+	err := checkPathNotContained(src, dest)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	file, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	if !file.IsDir() {
+		return fmt.Errorf("Source " + file.Name() + " is not a directory!")
+	}
+
+	err = os.MkdirAll(dest, 0755)
+	if err != nil {
+		return err
+	}
+
+	files, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			if err = NewFile().CopyDir(filepath.Join(src, f.Name()), filepath.Join(dest, f.Name())); err != nil {
+				return err
+			}
+		} else {
+			if err = NewFile().CopyFile(filepath.Join(src, f.Name()), filepath.Join(dest, f.Name())); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// checkPathNotContained returns an error if 'subpath' is inside 'path'
+func checkPathNotContained(path string, subpath string) error {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+
+	absSubPath, err := filepath.Abs(subpath)
+	if err != nil {
+		return err
+	}
+
+	current := absSubPath
+	for {
+		if current == absPath {
+			return fmt.Errorf("cannot copy a folder onto itself")
+		}
+		up := filepath.Dir(current)
+		if current == up {
+			break
+		}
+		current = up
+	}
+	return nil
+}
