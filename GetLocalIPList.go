@@ -91,5 +91,5 @@ func GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	return string(body), nil
+	return strings.TrimSpace(string(body)), nil
 }
