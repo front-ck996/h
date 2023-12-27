@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -21,6 +22,7 @@ var (
 
 type SwaggerConfig struct {
 	RelativePath string
+	ApiPrefix    string
 }
 
 type swaggerService struct {
@@ -84,10 +86,24 @@ func SwaggerHandler(config SwaggerConfig) gin.HandlerFunc {
 			}
 			ctx.JSON(200, string(file))
 			break
+		case config.RelativePath + "/":
+			fileSystem := http.FS(front)
+			open, err := fileSystem.Open("dist/doc.html")
+			if err != nil {
+				return
+			}
+			all, err := io.ReadAll(open)
+			if err != nil {
+				return
+			}
+			outHtml := fmt.Sprintf("%s <script>window.apiPrefix = '%s'</script>", string(all), config.ApiPrefix)
+			ctx.Header("Content-Type", "text/html; charset=utf-8")
+			ctx.String(200, outHtml)
+			break
 
 		default:
 			fmt.Println(strings.TrimPrefix(ctx.Request.RequestURI, config.RelativePath), http.FS(front))
-			ctx.FileFromFS(strings.TrimPrefix(ctx.Request.RequestURI, config.RelativePath), http.FS(front))
+			ctx.FileFromFS("dist/"+strings.TrimPrefix(ctx.Request.RequestURI, config.RelativePath), http.FS(front))
 		}
 
 	}
