@@ -57,14 +57,39 @@ func _set(db *bolt.DB, bucket string, key string, value interface{}) error {
 	})
 	return err
 }
+func _createBucketIfNotExists(db *bolt.DB, bucket string) error {
+	err := db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(bucket))
+		return err
+	})
+	return err
+}
 
 func _getAll[T any](db *bolt.DB, bucket string) []T {
 	var res []T
+	_createBucketIfNotExists(db, bucket)
 	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket))
-		err := b.ForEach(func(k, v []byte) error {
+		bucket := tx.Bucket([]byte(bucket))
+		err := bucket.ForEach(func(k, v []byte) error {
 			value := _encodeValue[T](v)
 			res = append(res, value)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return res
+}
+
+func _getAllKey(db *bolt.DB, bucketStr string) []string {
+	var res []string
+	_createBucketIfNotExists(db, bucketStr)
+	db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(bucketStr))
+		err := bucket.ForEach(func(k, v []byte) error {
+			res = append(res, string(k))
 			return nil
 		})
 		if err != nil {
