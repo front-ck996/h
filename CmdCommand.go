@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 // Cmd 封装常用的操作系统命令的函数
@@ -135,8 +136,11 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 	}
 	c.Stderr = stderr
 
+	var wg sync.WaitGroup
+	wg.Add(2)
 	// 接受标准输出流
 	go func() {
+		wg.Done()
 		scanner := bufio.NewScanner(c.Stdout)
 		for scanner.Scan() {
 			text := c.convCharset(scanner.Text())
@@ -149,6 +153,7 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 
 	// 接受标准错误流
 	go func() {
+		wg.Done()
 		scanner := bufio.NewScanner(c.Stderr)
 		for scanner.Scan() {
 			text := c.convCharset(scanner.Text())
@@ -170,6 +175,7 @@ func (c *Cmd) Run(inputCmd []string) (string, error) {
 	//	return "", err
 	//}
 	// 等待命令执行完毕
+	wg.Wait()
 	err = cmd.Wait()
 	if err != nil {
 		return "", err
